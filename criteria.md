@@ -23,8 +23,10 @@ For at least 4 of my 5 test questions, the retrieved chunks include one that
 contains the answer.
 
 **Why this target:**
-<!-- e.g. "One of my questions is about a topic only two documents mention, so
-     I expect that one to be hard." -->
+The five questions cover administrative rules, a course workload, dining, and
+housing. Four of them have a single focused source, while the housing lottery
+question contains several details, so 4 of 5 leaves room for one difficult
+retrieval without making the target trivial.
 
 ---
 
@@ -33,8 +35,10 @@ contains the answer.
 Every answer the system produces names at least one source document.
 
 **Why this target:**
-<!-- Why all five and not four? What about your setup makes that achievable —
-     or what would have to go wrong for it not to be? -->
+The pipeline keeps the source filename in every retrieved chunk and the command
+line adds retrieved sources to the final outcome. Because the corpus is local
+and every test question is based on one of its documents, all five should have
+an attributable source unless generation or attribution code fails.
 
 ---
 
@@ -50,47 +54,40 @@ in at least 4 of 5 tries.
      just keep five of them, or the "4 of 5" above has nothing to be 4 of. -->
 
 **Why this target:**
-<!-- What did your distances look like when you set the cutoff in Milestone 4?
-     Was there a clean gap, or did the two groups overlap? -->
+The questions in `OUT_OF_SCOPE` are about unrelated facts and technologies, so
+the gate should reject nearly all of them. I chose 4 of 5 because one unrelated
+question could still produce an accidental semantic match in a small corpus.
 
 ---
 
 ## 4. Something about your chunks
 
-<!-- YOU WRITE THIS ONE.
-
-     How would you know if your chunks were the right size? Name something
-     countable or observable.
-
-     Examples of the right shape — don't copy these, they should come from
-     what you actually saw in Milestone 3:
-       - "At least 4 of 5 sampled chunks read as a complete thought, with no
-          sentence cut in half at either end."
-       - "No chunk is shorter than 200 characters, since anything below that
-          in my corpus turned out to be a heading with no content under it." -->
+At least 4 of 5 sampled chunks should read as a complete thought, and no
+produced chunk should be shorter than 100 characters.
 
 
 
 **Why this target:**
-
+The campus-life documents are short posts averaging about 317 characters, so
+most should remain intact. The 100-character floor rules out fragments while
+still allowing a meaningful short paragraph to remain a separate chunk when
+combining it would exceed the 400-character limit.
 
 
 ---
 
 ## 5. Your choice
 
-<!-- YOU WRITE THIS ONE TOO.
-
-     Pick something you actually care about getting right. It could be about
-     speed, about refusals, about a particular kind of question your corpus
-     handles badly, about source attribution being correct rather than merely
-     present — anything, as long as it names a number or an observable
-     outcome. -->
+For all 5 in-corpus questions, the best retrieved source should be a document
+that contains the expected answer phrase.
 
 
 
 **Why this target:**
-
+Each test question was written from a specific document and includes an
+`expects` phrase taken from that document. Requiring all five best sources to
+match tests whether retrieval finds the right source, not merely a related
+campus-life document.
 
 
 ---

@@ -97,7 +97,57 @@ def split_documents(documents: list[Document]) -> list[Chunk]:
       - Would splitting on paragraph breaks keep more thoughts intact than
         splitting on a character count?
     """
-    return fallback_split(documents)
+    chunk_size = config.CHUNK_SIZE
+    overlap = config.CHUNK_OVERLAP
+    if overlap >= chunk_size:
+        raise ValueError("overlap has to be smaller than chunk_size")
+
+    chunks: list[Chunk] = []
+    for doc in documents:
+        paragraphs = [part.strip() for part in doc.text.split("\n\n") if part.strip()]
+        pieces: list[str] = []
+        current: list[str] = []
+
+        for paragraph in paragraphs:
+            if len(paragraph) > chunk_size:
+                if current:
+                    pieces.append("\n\n".join(current))
+                    current = []
+                start = 0
+                while start < len(paragraph):
+                    end = min(start + chunk_size, len(paragraph))
+                    if end < len(paragraph):
+                        boundary = paragraph.rfind(" ", start, end)
+                        if boundary > start:
+                            end = boundary
+                    pieces.append(paragraph[start:end].strip())
+                    if end >= len(paragraph):
+                        break
+                    start = max(end - overlap, start + 1)
+                continue
+
+            candidate = "\n\n".join(current + [paragraph])
+            if current and len(candidate) > chunk_size:
+                pieces.append("\n\n".join(current))
+                overlap_candidate = "\n\n".join([current[-1], paragraph])
+                current = [current[-1], paragraph] if len(overlap_candidate) <= chunk_size else [paragraph]
+            else:
+                current.append(paragraph)
+
+        if current:
+            pieces.append("\n\n".join(current))
+
+        for index, piece in enumerate(pieces):
+            chunks.append(
+                Chunk(
+                    text=piece,
+                    source=doc.source,
+                    index=index,
+                    produced_by="chunker.py::split_documents",
+                )
+            )
+
+    return chunks
 
 
 def describe(chunks: list[Chunk]) -> str:
