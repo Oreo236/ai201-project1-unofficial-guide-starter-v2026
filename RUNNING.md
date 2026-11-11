@@ -217,8 +217,40 @@ gunicorn serve:app                 # the way a host starts it
 > the first request after a quiet spell waits roughly a minute for it to wake
 > up. That's the tier, not your code.
 
-`serve.py` has **no logging and no timing in it on purpose** — building that is
-the unit 9 exercise, and it is easier to instrument something you wrote.
+### Capstone run path (Path B: local with logs)
+
+**Environment:** Python 3.13 (the pinned packages do not support 3.14 or newer),
+the packages pinned in `requirements.txt`, a `.env` with `GEMINI_API_KEY`, and one
+local model file: Chroma's bundled `all-MiniLM-L6-v2` (about 80 MB, downloaded
+on the first index).
+
+**Start it, from a fresh checkout:**
+
+```bash
+python3.13 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env            # then paste your key in
+python app.py index             # builds the vector store (chroma_db/ is not committed)
+python serve.py                 # http://localhost:5000
+```
+
+**Check it:**
+
+```bash
+curl http://localhost:5000/health
+curl -X POST http://localhost:5000/ask -H 'Content-Type: application/json' \
+     -d '{"question": "is the housing lottery random?"}'
+```
+
+**Logging:** every `/ask` request appends one JSON line to `logs/requests.jsonl`:
+`timestamp`, `input`, `output`, `status`, `duration_ms`, and for answered
+requests `refused`, `best_distance`, `sources`, `tokens_in`, `tokens_out`;
+`error` is set on bad input (400) and failures (500), which are logged too.
+The token fields are read from process-wide counters, so they are only exact
+when requests are served one at a time (as with `python serve.py`).
+
+**Cost per run:** `python measure_cost.py` sends 10 questions through `/ask`
+with the cache off and prints mean seconds and tokens per run.
 
 ---
 

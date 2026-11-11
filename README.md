@@ -293,3 +293,70 @@ worse in a way that matters: repeating titles pulled the "deadlines" distance to
   "$1.75" appear in several documents.
 - Criterion 2: say explicitly whether a refusal counts as an answer.
 - Write the `expects` phrase after checking what the question actually asks.
+
+
+---
+
+# Capstone
+
+> DRAFT of the build-half sections, written with Claude's help. Rewrite in your
+> own words. The five criteria, run log, verdicts and improvement for the
+> capstone are NOT written here: they are yours, and `criteria.md` must be
+> committed (message: "add capstone criteria") before any capstone results.
+
+## What This Extends
+
+The Unofficial Guide (this repository, the `campus_life` corpus): the retrieval
+pipeline, relevance gate and grounded answers from units 1 and 2. New: an HTTP
+service with structured request logging and a measured cost per run.
+
+## The Shape
+
+**A: Deploy and instrument.** I am adding the operational layer only: `serve.py`
+as the run path, a structured log of every request (including failures and bad
+input), and a measured cost. **Out of scope:** no hosting (Path B instead), no
+change to chunking, retrieval or the gate, no new features or interface.
+
+## Running It
+
+**Path B: local with logs.** One command (`python serve.py`) after the setup in
+`RUNNING.md` ("Capstone run path"). TODO (yours): say whether you tried hosting.
+Path B is chosen because the embedding model runs locally (about 80 MB of model
+files, and the free host tier has 512 MB of memory).
+
+## Instrumentation
+
+`serve.py::log_request` appends one JSON line per `/ask` request to
+`logs/requests.jsonl`. Fields: `timestamp`, `input`, `output`, `status`,
+`duration_ms`, and for answered requests `refused`, `best_distance`, `sources`,
+`tokens_in`, `tokens_out`; `error` is set on bad input (400) and failures (500).
+Extract (10 answered requests from `measure_cost.py`, then 3 bad-input requests
+and 1 forced error, all unedited):
+
+```json
+{"timestamp": "2026-11-11T02:45:06.241+00:00", "input": "Is the housing lottery random, and how are students prioritized?", "output": "The housing lottery is not entirely random: rising sophomores get a number drawn at random, but juniors and seniors are ordered by accumulated credit hours first, with ties broken randomly. \n\nSource: `admin_housing_lottery.txt`", "status": 200, "duration_ms": 2871, "refused": false, "best_distance": 0.1708, "sources": ["admin_housing_lottery.txt", "advising_registration.txt", "dining_the_atrium_followup.txt", "housing_innisfree_hall.txt", "housing_tamsin_court.txt"], "tokens_in": 586, "tokens_out": 49, "error": null}
+{"timestamp": "2026-11-11T02:45:13.895+00:00", "input": "When can students add or drop a course, and what happens after week two?", "output": "Students can add a course through the end of the second week, and dropping is allowed through the end of week six. A drop that occurs after week two will show as a W on your transcript. This information comes from admin_add_drop_deadline.txt.", "status": 200, "duration_ms": 7652, "refused": false, "best_distance": 0.2635, "sources": ["admin_add_drop_deadline.txt", "admin_grade_appeals.txt", "admin_pass_fail_option.txt", "advising_registration.txt", "course_cs_340.txt"], "tokens_in": 515, "tokens_out": 54, "error": null}
+{"timestamp": "2026-11-11T02:45:14.769+00:00", "input": "How much time should I expect to spend on CS 210 outside class?", "output": "You should expect to spend 8 to 10 hours a week outside of class on CS 210. \n\nSources: `course_cs_210.txt` and `course_cs_210_workload.txt`", "status": 200, "duration_ms": 874, "refused": false, "best_distance": 0.2499, "sources": ["course_cs_210.txt", "course_cs_210_workload.txt", "course_cs_340.txt", "course_stat_150.txt", "course_stat_150_workload.txt"], "tokens_in": 509, "tokens_out": 54, "error": null}
+{"timestamp": "2026-11-11T02:45:17.312+00:00", "input": "How long are the peak waits at Pellew Dining Hall?", "output": "At Pellew Dining Hall, the peak wait times are 12 to 18 minutes. \n\nSource: `dining_pellew_dining_hall.txt` (also mentioned in `dining_pellew_dining_hall_followup.txt`).", "status": 200, "duration_ms": 2541, "refused": false, "best_distance": 0.1806, "sources": ["dining_halden_hall.txt", "dining_halden_hall_followup.txt", "dining_pellew_dining_hall.txt", "dining_pellew_dining_hall_followup.txt", "dining_the_ridgeway_cafe_followup.txt"], "tokens_in": 703, "tokens_out": 57, "error": null}
+{"timestamp": "2026-11-11T02:45:22.599+00:00", "input": "What does laundry cost at Innisfree Hall?", "output": "Laundry at Innisfree Hall costs $1.75 to wash and $1.75 to dry, and it is app-based. \n\nSources: `housing_innisfree_hall.txt` and `housing_innisfree_hall_laundry.txt`", "status": 200, "duration_ms": 5286, "refused": false, "best_distance": 0.1712, "sources": ["housing_aldridge_hall_laundry.txt", "housing_calder_annexe.txt", "housing_innisfree_hall.txt", "housing_innisfree_hall_laundry.txt", "housing_old_brewhouse.txt"], "tokens_in": 571, "tokens_out": 60, "error": null}
+{"timestamp": "2026-11-11T02:45:24.352+00:00", "input": "What deadlines should I know about?", "output": "Based on the provided documents, you should know about the following deadlines and windows:\n* You can add a course through the end of the second week, and you can drop a course through the end of week six (though drops after week two result in a \"W\" on your transcript) (*admin_add_drop_deadline.txt*).\n* You declare your major at the end of your second semester, or later if needed (*admin_declaring_a_major.txt*).", "status": 200, "duration_ms": 1752, "refused": false, "best_distance": 0.5973, "sources": ["admin_add_drop_deadline.txt", "admin_declaring_a_major.txt", "advising_registration.txt", "course_cs_340.txt", "course_cs_340_workload.txt"], "tokens_in": 496, "tokens_out": 102, "error": null}
+{"timestamp": "2026-11-11T02:45:27.320+00:00", "input": "How do I avoid the long lines when eating on campus?", "output": "To avoid long lines at North Kitchen, The Ridgeway Café, and Pellew Dining Hall between classes, you should go before 11:45. \n\nSource documents: \n- `dining_north_kitchen_followup.txt`\n- `dining_the_ridgeway_cafe_followup.txt`\n- `dining_pellew_dining_hall_followup.txt`", "status": 200, "duration_ms": 2967, "refused": false, "best_distance": 0.533, "sources": ["dining_north_kitchen_followup.txt", "dining_pellew_dining_hall_followup.txt", "dining_the_ridgeway_cafe_followup.txt", "dining_verrill_street_grill.txt"], "tokens_in": 678, "tokens_out": 89, "error": null}
+{"timestamp": "2026-11-11T02:45:32.334+00:00", "input": "Do seniors who took summer classes get better dorm picks?", "output": "Yes, juniors and seniors in the housing lottery are ordered by accumulated credit hours first, which means a senior who took summer courses reliably beats a senior who didn't (admin_housing_lottery.txt).", "status": 200, "duration_ms": 5013, "refused": false, "best_distance": 0.4784, "sources": ["admin_housing_lottery.txt", "admin_pass_fail_option.txt", "housing_aldridge_hall.txt", "housing_old_brewhouse.txt", "orientation_what_matters.txt"], "tokens_in": 606, "tokens_out": 43, "error": null}
+{"timestamp": "2026-11-11T02:45:40.486+00:00", "input": "What's the last day I can quit a class without it showing up on my transcript?", "output": "The last day you can drop a class without it showing up on your transcript is the end of the second week, because a drop after week two shows as a W on your transcript. This comes from *admin_add_drop_deadline.txt*.", "status": 200, "duration_ms": 8150, "refused": false, "best_distance": 0.431, "sources": ["admin_add_drop_deadline.txt", "admin_pass_fail_option.txt", "admin_transcript_requests.txt", "admin_withdrawal_deadline.txt", "course_stat_150.txt"], "tokens_in": 522, "tokens_out": 51, "error": null}
+{"timestamp": "2026-11-11T02:45:50.165+00:00", "input": "Are the washers in the transfer-friendly dorm expensive?", "output": "I do not have enough information to answer your question, as the provided documents do not mention a \"transfer-friendly dorm.\"", "status": 200, "duration_ms": 9678, "refused": false, "best_distance": 0.44, "sources": ["housing_calder_annexe.txt", "housing_fenwick_court.txt", "housing_innisfree_hall_laundry.txt", "housing_old_brewhouse.txt", "housing_old_brewhouse_laundry.txt"], "tokens_in": 574, "tokens_out": 25, "error": null}
+{"timestamp": "2026-11-11T02:45:50.571+00:00", "input": "   ", "output": "Send JSON with a question in it, like {\"question\": \"is the housing lottery random?\"}", "status": 400, "duration_ms": 0, "error": "bad_input"}
+{"timestamp": "2026-11-11T02:45:50.571+00:00", "input": null, "output": "Send JSON with a question in it, like {\"question\": \"is the housing lottery random?\"}", "status": 400, "duration_ms": 0, "error": "bad_input"}
+{"timestamp": "2026-11-11T02:45:50.571+00:00", "input": 123, "output": "Send JSON with a question in it, like {\"question\": \"is the housing lottery random?\"}", "status": 400, "duration_ms": 0, "error": "bad_input"}
+{"timestamp": "2026-11-11T02:45:51.018+00:00", "input": "is the housing lottery random?", "output": "RuntimeError: No index called 'does_not_exist__default'. Run `python app.py index` first.", "status": 500, "duration_ms": 446, "error": "RuntimeError"}
+```
+
+## What It Costs
+
+Measured with `measure_cost.py` (10 questions through `/ask`, response cache
+off, free-tier Gemini model `gemini-3.5-flash-lite`): mean **4.68 seconds**
+per run (range 0.87-9.68 s) and **634 tokens** per run (576 in,
+58 out). No dollar figure was measured: this key is on the free tier.
+
+For 100 people a day, assuming 5 questions each (my assumption, not measured):
+100 x 5 = 500 runs x 634 tokens = about 317k tokens
+and 500 x 4.68 s = about 39 minutes of compute per day.
