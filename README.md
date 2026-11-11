@@ -169,8 +169,8 @@ answer correct when it contains the `expects` phrase. All runs: top-k 5, cutoff
 
 ## Run Log — Before
 
-Files: `results/run_2026-11-10_2054_before-scored.md` (original set),
-`results/run_2026-11-10_2056_before-harder-scored.md` (harder set).
+Files: `results/run_2026-09-20_2054_before-scored.md` (original set),
+`results/run_2026-09-20_2056_before-harder-scored.md` (harder set).
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
@@ -183,7 +183,7 @@ Files: `results/run_2026-11-10_2054_before-scored.md` (original set),
 Retrieval and the gate are deterministic, so only the generated answers could
 vary between runs. They did not vary on pass/fail.
 
-Real output (file `results/run_2026-11-10_2056_before-harder-scored.md`, produced
+Real output (file `results/run_2026-09-20_2056_before-harder-scored.md`, produced
 by `run_eval.py::main` calling `generate.py::answer_from_chunks`):
 
 ```
@@ -244,8 +244,8 @@ probably not the washers question.
 
 ### Run Log — After
 
-Files: `results/run_2026-11-10_2137_after-title-original.md`,
-`results/run_2026-11-10_2139_after-title-harder.md`.
+Files: `results/run_2026-09-21_2137_after-title-original.md`,
+`results/run_2026-09-21_2139_after-title-harder.md`.
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
@@ -450,7 +450,7 @@ error.
 
 **Run Log — After**
 
-File `results/capstone_2026-11-10_2234_after.md`, same script and settings.
+File `results/capstone_2026-11-08_2234_after.md`, same script and settings.
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
