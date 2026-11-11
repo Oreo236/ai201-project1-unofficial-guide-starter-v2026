@@ -12,9 +12,6 @@ Under each one, write a sentence or two on **why that target** and not a
 stricter or looser one. A reason that says something about your corpus or your
 pipeline earns credit; *"80% seemed reasonable"* does not.
 
-> Missing your own targets next unit costs you nothing. Setting a target so
-> easy you can't miss it does.
-
 ---
 
 ## 1. Retrieved chunks contain the answer
@@ -27,6 +24,8 @@ The five questions cover administrative rules, a course workload, dining, and
 housing. Four of them have a single focused source, while the housing lottery
 question contains several details, so 4 of 5 leaves room for one difficult
 retrieval without making the target trivial.
+
+**Unit 2 testing clarification (not a revision):** The target stays at 4 of 5. The first five questions all returned the answer chunk at rank 1, so they could not show weak retrieval. I added `HARDER_QUESTIONS` in `questions.py` (two vague questions and three paraphrases with few shared words) and ran them as a second set. I kept the original five and report both. Result on the harder set: the answer was in the top 5 for 5 of 5 questions, but only at rank 3 for the two vague ones. I chose these questions after seeing the first results, so the harder set is a stress test, not a blind test.
 
 ---
 
@@ -58,6 +57,9 @@ The questions in `OUT_OF_SCOPE` are about unrelated facts and technologies, so
 the gate should reject nearly all of them. I chose 4 of 5 because one unrelated
 question could still produce an accidental semantic match in a small corpus.
 
+
+**Unit 2 testing clarification (not a revision):** The target stays at 4 of 5. The original five out-of-scope questions (capital of Mongolia, Rust loops, ...) had best distances of 0.82 to 0.93, so any cutoff would refuse them. I added `OUT_OF_SCOPE_CAMPUS` in `questions.py`: five campus-flavoured questions that I grep-checked against the documents. Result: the gate refused 2 of 5. Parking permit cost (0.554), tuition (0.559) and scholarship GPA (0.582) got through because the corpus has nearby documents (parking permits, pass/fail, graduation requirements). Original set 5 of 5, campus set 2 of 5, so on the harder set this criterion is MISSED. (My first probe wrongly counted the library hours question as out-of-corpus. `study_library_hours.txt` answers it, so I dropped it.)
+
 ---
 
 ## 4. Something about your chunks
@@ -88,6 +90,9 @@ Each test question was written from a specific document and includes an
 `expects` phrase taken from that document. Requiring all five best sources to
 match tests whether retrieval finds the right source, not merely a related
 campus-life document.
+
+
+**Unit 2 testing clarification (not a revision):** The target stays at all 5. I ran the same harder set from criterion 1 against it. Only 3 of 5 had the expected phrase in the top-ranked chunk. The two vague questions ("What deadlines should I know about?", "How do I avoid the long lines when eating on campus?") returned `course_cs_340.txt` and `dining_verrill_street_grill.txt` first, and the answer chunk appeared at rank 3. I did not use multi-document questions here, because one top source cannot contain an answer spread across documents. One caveat: the washers question matched `housing_fenwick_court.txt` first, which also contains "$1.75", so the phrase check does not prove the intended document won.
 
 
 ---

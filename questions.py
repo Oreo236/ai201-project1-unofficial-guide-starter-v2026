@@ -63,3 +63,24 @@ OUT_OF_SCOPE = [
 def answered() -> list[dict]:
     """The questions you've actually filled in."""
     return [q for q in QUESTIONS if q.get("question", "").strip()]
+
+
+# ─── Unit 2 additions (added AFTER the first results; originals above unchanged) ─
+# Harder in-corpus questions: vague or paraphrased, one expected phrase each.
+HARDER_QUESTIONS = [
+    {"question": "What deadlines should I know about?", "expects": "week six"},
+    {"question": "How do I avoid the long lines when eating on campus?", "expects": "11:45"},
+    {"question": "Do seniors who took summer classes get better dorm picks?", "expects": "credit hours"},
+    {"question": "What's the last day I can quit a class without it showing up on my transcript?", "expects": "week six"},
+    {"question": "Are the washers in the transfer-friendly dorm expensive?", "expects": "$1.75"},
+]
+
+# Campus-flavoured questions the corpus does NOT answer (each grep-checked
+# against corpora/campus_life/documents before use).
+OUT_OF_SCOPE_CAMPUS = [
+    "How much does a parking permit cost?",
+    "What is the tuition for the CS major?",
+    "What is the minimum GPA to keep a merit scholarship?",
+    "Who is the president of the university?",
+    "What are the bus fares to the airport?",
+]
