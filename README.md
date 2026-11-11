@@ -98,14 +98,19 @@ It's free with a student ID. The stop outside Fenwick Court is the one that gets
 <!-- One complete question and answer, pasted as text, with the source line
      visible. Milestone 4. -->
 
-**Question:**
+**Question:** Is the housing lottery random, and how are students prioritized?
 
-**Answer:**
+**Answer:** The housing lottery is not entirely random in the way most people assume. Rising sophomores get a number drawn at random, but juniors and seniors are ordered first by accumulated credit hours, with random tie-breaks used only for ties.
 
-```
-```
+**Source line:** Source: admin_housing_lottery.txt (best distance 0.171, cutoff 0.6; produced by `python app.py ask`, `generate.py::answer_from_chunks`)
 
-**My relevance cutoff:**
+**Current relevance cutoff:** 0.6 (the starter setting in `config.py`; it has
+not yet been changed). A local retrieval-only pass using `store.py::search`,
+the `campus_life` corpus, and the configured embedding model returned in-corpus
+best distances from 0.1708 to 0.2635 and out-of-corpus best distances from
+0.8246 to 0.9340. The current 0.6 cutoff falls between those groups. These
+are single-pass retrieval measurements, not the repeated answer evaluation
+required in Unit 2.
 
 <!-- The number you set in config.py, and how you got there.
 
@@ -118,7 +123,16 @@ It's free with a student ID. The stop outside Fenwick Court is the one that gets
 
 | Question | In corpus? | Best distance |
 |---|---|---|
-|  |  |  |
+| Is the housing lottery random, and how are students prioritized? | Yes | 0.1708 |
+| When can students add or drop a course, and what happens after week two? | Yes | 0.2635 |
+| How much time should I expect to spend on CS 210 outside class? | Yes | 0.2499 |
+| How long are the peak waits at Pellew Dining Hall? | Yes | 0.1806 |
+| What does laundry cost at Innisfree Hall? | Yes | 0.2155 |
+| What is the capital of Mongolia? | No | 0.8246 |
+| How do I change the oil in a diesel engine? | No | 0.9340 |
+| Who won the 1994 World Cup? | No | 0.8859 |
+| What is the recommended dosage of ibuprofen for a headache? | No | 0.8442 |
+| How do I write a for loop in Rust? | No | 0.8907 |
 
 ## How I Used AI
 
@@ -258,3 +272,24 @@ It's free with a student ID. The stop outside Fenwick Court is the one that gets
      differently, and why?
 
      Milestone 5. -->
+
+
+---
+
+# Unit 2
+
+## Run Log — Before
+
+Produced by `run_eval.py::main` (file: `results/run_2026-11-10_1918_before.md`), top-k 5, cutoff 0.6, caching off.
+No `scorer.py` exists yet, so criteria 1, 2 and 5 were counted by script from the retrieved chunks and the answer text. Criterion 4's "complete thought" half needs a human read and is left blank.
+
+| Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
+|---|---|---|---|---|---|
+| 1. Retrieved chunks contain the answer | 4 of 5 | 5/5 | 5/5 | 5/5 | MET (retrieval is deterministic) |
+| 2. Every answer names a source | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 3. Gate stops out-of-corpus questions | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 4. Chunks: 4 of 5 complete, none under 100 chars | see target | shortest 111 chars (floor met); completeness TODO | same | same | TODO (needs your read) |
+| 5. Best source contains the expected phrase | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+
+**Verdicts, Diagnoses, The Improvement, What's Still Broken, What I'd Do Differently:** TODO — yours to write.
+Every criterion cleared on the first try, so the honest question is whether the targets were set too low (see the note that came with this).
