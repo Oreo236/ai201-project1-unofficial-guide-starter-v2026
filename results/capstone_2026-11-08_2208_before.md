@@ -5,7 +5,7 @@ Produced by `capstone_eval.py`.
 ```json
 {
   "label": "before",
-  "when": "2026-11-10T21:57:01",
+  "when": "2026-11-08T21:57:01",
   "trials": [
     {
       "trial": 1,
