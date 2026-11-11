@@ -52,6 +52,13 @@ def log_request(record: dict) -> None:
         pass
 
 
+def is_model_busy(exc: Exception) -> bool:
+    """True for the model service being rate limited or unavailable (429 / 503)."""
+    text = f"{type(exc).__name__} {exc}".lower()
+    return any(k in text for k in ("429", "503", "resource_exhausted", "unavailable",
+                                   "rate limit", "rate limited", "high demand"))
+
+
 @app.get("/health")
 def health():
     """Is the service up, and is there an index to search?
@@ -111,10 +118,16 @@ def ask():
     try:
         outcome = ask_pipeline(question, corpus=config.CORPUS)
     except Exception as exc:  # noqa: BLE001 — a reader gets this, not a traceback
-        message = f"{type(exc).__name__}: {exc}"
-        log_request({"input": question, "output": message, "status": 500,
+        detail = f"{type(exc).__name__}: {exc}"
+        if is_model_busy(exc):
+            # Capstone improvement: the caller gets a plain message and a 503;
+            # the full detail stays in the log only.
+            log_request({"input": question, "output": detail, "status": 503,
+                         "duration_ms": ms(), "error": "model_unavailable"})
+            return jsonify({"error": "The model is busy right now. Please try again in a minute."}), 503
+        log_request({"input": question, "output": detail, "status": 500,
                      "duration_ms": ms(), "error": type(exc).__name__})
-        return jsonify({"error": message}), 500
+        return jsonify({"error": detail}), 500
 
     after = token_counts()
     log_request({
