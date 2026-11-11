@@ -158,138 +158,138 @@ required in Unit 2.
 
 # Unit 2
 
-<!-- These sections get ADDED to what's already above. Don't delete or rewrite
-     unit 1 — the point is that someone can see what you said before you knew
-     how it went. -->
+> DRAFT written with Claude's help from the measured results. Rewrite the
+> reasoning in your own words before submitting; the numbers come from the files
+> named in each section.
+
+Two question sets were used. The **original set** is the five questions from
+`questions.py::QUESTIONS` plus `OUT_OF_SCOPE`. The **harder set** is
+`HARDER_QUESTIONS` plus `OUT_OF_SCOPE_CAMPUS`, added after seeing the first
+results (so it is a stress test, not a blind test). `scorer.py::judge` marks an
+answer correct when it contains the `expects` phrase. All runs: top-k 5, cutoff
+0.6, caching off, three runs, `run_eval.py::main`. Free-tier pacing was lowered to
+10 requests/min from the command line; `config.py` was not changed.
 
 ## Run Log — Before
 
-<!-- Your five criteria, three runs each. `python run_eval.py --label before`
-     runs the questions, puts the OUT_OF_SCOPE ones through the gate, and
-     writes it all into results/ for you. Targets come from criteria.md; the
-     verdict column is your call.
-
-     Criterion 3 is measured in one deterministic pass rather than three, so
-     the same number goes in all three run columns. That's correct, not lazy.
-
-     Milestone 1. -->
+Files: `results/run_2026-11-10_2054_before-scored.md` (original set),
+`results/run_2026-11-10_2056_before-harder-scored.md` (harder set).
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 1. Retrieved chunk contains the answer | 4 of 5 |  |  |  |  |
-| 2. Every answer names a source | 5 of 5 |  |  |  |  |
-| 3. Gate stops out-of-corpus questions | 4 of 5 |  |  |  |  |
-| 4. | | | | | |
-| 5. | | | | | |
+| 1. Retrieved chunks contain the answer (original / harder) | 4 of 5 | 5/5 / 5/5 | 5/5 / 5/5 | 5/5 / 5/5 | MET |
+| 2. Every answer names a source (original / harder) | 5 of 5 | 5/5 / 4/5 | 5/5 / 4/5 | 5/5 / 4/5 | MET on original, MISSED on harder |
+| 3. Gate stops out-of-corpus questions (original / campus) | 4 of 5 | 5/5 / 2/5 | 5/5 / 2/5 | 5/5 / 2/5 | MET on original, MISSED on campus |
+| 4. 4 of 5 sampled chunks complete, none under 100 chars | 4 of 5, floor 100 | 5/5, shortest 111 | same | same | MET |
+| 5. Best source contains expected phrase (original / harder) | 5 of 5 | 5/5 / 3/5 | 5/5 / 3/5 | 5/5 / 3/5 | MET on original, MISSED on harder |
 
-<!-- Underneath, paste the REAL output for each criterion from one of your
-     runs — the actual text your system produced, not a description of it.
-     Name the file and function that produced it. -->
+Retrieval and the gate are deterministic, so only the generated answers could
+vary between runs. They did not vary on pass/fail.
+
+Real output (file `results/run_2026-11-10_2056_before-harder-scored.md`, produced
+by `run_eval.py::main` calling `generate.py::answer_from_chunks`):
+
+```
+Are the washers in the transfer-friendly dorm expensive? — run 1
+I do not have enough information to answer this question.
+```
+```
+What's the last day I can quit a class without it showing up on my transcript? — run 1
+You can add or drop a course through the end of the second week; however, a drop after week two shows as a W on your transcript. ... the end of the second week.
+Source: admin_add_drop_deadline.txt
+```
+Gate on `OUT_OF_SCOPE_CAMPUS` (`run_eval.py::check_out_of_scope`): LET THROUGH
+parking permit cost 0.554, tuition 0.559, scholarship GPA 0.582; refused
+president 0.788, airport bus fares 0.714.
 
 ## Verdicts
 
-<!-- MET or MISSED for each of the five, against the target you wrote last
-     unit — not a new one. Plus a sentence on how you decided. That sentence
-     matters most where it was close.
-
-     If your target said 4 of 5 and your runs came out 4, 3, 4, that's a MISS.
-     The target has to hold, not show up occasionally.
-
-     Milestone 2. -->
-
 | # | Criterion | Verdict | How I decided |
 |---|---|---|---|
-| 1 |  |  |  |
-| 2 |  |  |  |
-| 3 |  |  |  |
-| 4 |  |  |  |
-| 5 |  |  |  |
+| 1 | Answer in retrieved chunks | MET | Phrase was in the top 5 for 5/5 on both sets. Weak measurement: the phrase "$1.75" appears in several laundry documents, so it cannot show the intended document was found. |
+| 2 | Every answer names a source | MISSED (harder set) | 12 of 15 harder-set answers named a source. The 3 that did not were honest refusals on the washers question. Whether a refusal should count is a wording gap in the criterion; I read "every answer" strictly. |
+| 3 | Gate refuses uncovered questions | MISSED (campus set) | 5/5 on far-away questions, 2/5 on campus-flavoured ones. Target of 4/5 did not hold. |
+| 4 | Chunk quality | MET | Shortest chunk 111 characters. In a random sample of five chunks I judged all five complete. |
+| 5 | Top source has the phrase | MISSED (harder set) | 3/5 on the harder set. The two vague questions put an unrelated document first (answer at rank 3). |
+
+One scorer false negative: "last day I can quit a class without it showing on my
+transcript" was marked failed (3 runs) although the answer was right ("end of the
+second week"). My `expects` phrase ("week six") was wrong for that question.
 
 ## Diagnoses
 
-<!-- For each miss: which stage caused it, and how. The stage alone isn't
-     enough — you need the mechanism.
-
-     Not a diagnosis: "Question 3 didn't work."
-     A diagnosis:     "Question 3 asks about laundry costs. The answer is in
-                       one sentence that got split across two chunks, so
-                       neither chunk on its own contains it."
-
-     The five stages: loading → chunking → embedding → retrieval → generation.
-
-     Look for a pattern. If three misses all ask about numbers, that's one
-     problem, not three.
-
-     Missed nothing? Say so, then say honestly whether your targets were set
-     low, and which one you'd tighten and to what.
-
-     Milestone 3. -->
+- **Criterion 3 (retrieval/gate).** The gate compares only the best chunk's
+  distance. Parking cost, tuition and scholarship GPA sit near existing documents
+  (parking permits, pass/fail, graduation requirements), so their best distances
+  (0.55-0.58) fall under the 0.6 cutoff. In-corpus paraphrases land at 0.43-0.48,
+  so the two groups overlap and no single cutoff separates them cleanly.
+- **Criterion 5 (retrieval).** Vague questions ("What deadlines should I know
+  about?") have no distinctive terms, so embeddings match topically unrelated
+  documents first. The answer chunk was at rank 3.
+- **Criterion 2 / washers question (retrieval, then generation).** Before the fix,
+  `housing_innisfree_hall_laundry.txt` was not in the top 5 at all. The question
+  never says "Innisfree", and the only document linking "transfer" to Innisfree is
+  `housing_innisfree_hall.txt`. The model refused, correctly, on thin material.
+- **Pattern:** the misses are questions that do not share words with their source,
+  and the one embedding model plus a distance-only gate cannot tell "close topic"
+  from "has the answer".
 
 ## The Improvement
 
-**What I changed:**
+**What I changed:** In `chunker.py::split_documents`, every chunk after the first
+now starts with its document's title line (chunk 0 already has it). Nothing else.
+Index rebuilt: still 100 chunks, average 292 characters, longest 409.
 
-**Why I picked it:**
-
-<!-- Connect it to a specific diagnosis above in one sentence. If you can't,
-     you picked a fix because it sounded impressive. -->
+**Why I picked it:** The sample chunk from `course_engl_205.txt#1` had lost its
+"ENGL 205" heading, and the washers miss involved a laundry document that
+retrieval did not surface. I predicted it would help the ENGL 205 fragment but
+probably not the washers question.
 
 ### Run Log — After
 
-<!-- Same format, same five criteria, three runs each.
-     `python run_eval.py --label after` -->
+Files: `results/run_2026-11-10_2137_after-title-original.md`,
+`results/run_2026-11-10_2139_after-title-harder.md`.
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 1. Retrieved chunk contains the answer | 4 of 5 |  |  |  |  |
-| 2. Every answer names a source | 5 of 5 |  |  |  |  |
-| 3. Gate stops out-of-corpus questions | 4 of 5 |  |  |  |  |
-| 4. | | | | | |
-| 5. | | | | | |
+| 1. Retrieved chunks contain the answer (original / harder) | 4 of 5 | 5/5 / 5/5 | 5/5 / 5/5 | 5/5 / 5/5 | MET |
+| 2. Every answer names a source (original / harder) | 5 of 5 | 5/5 / 4/5 | 5/5 / 4/5 | 5/5 / 4/5 | MET on original, MISSED on harder |
+| 3. Gate stops out-of-corpus questions (original / campus) | 4 of 5 | 5/5 / 2/5 | 5/5 / 2/5 | 5/5 / 2/5 | MET on original, MISSED on campus |
+| 4. Chunk quality | 4 of 5, floor 100 | shortest 123 (sample not re-read) | same | same | floor met; sample not re-checked; 409-char longest chunk exceeds the 400 cap |
+| 5. Best source contains expected phrase (original / harder) | 5 of 5 | 5/5 / 3/5 | 5/5 / 3/5 | 5/5 / 3/5 | MET on original, MISSED on harder |
 
-**Did it help?**
+| Measure | Before | After |
+|---|---|---|
+| Innisfree laundry best distance | 0.216 | 0.171 |
+| "What deadlines should I know about?" best distance | 0.516 | 0.597 |
+| Washers paraphrase best distance | 0.358 | 0.440 |
+| Innisfree laundry document in top 5 for washers question | no | yes |
 
-<!-- Say plainly whether it did, and how you know. If it made things worse,
-     say that — a change that backfired, honestly reported, earns full credit
-     and is more interesting than one that worked. What matters is that you can
-     tell.
-
-     Milestone 4. -->
+**Did it help?** Not on any criterion: every pass count is identical before and
+after. It helped retrieval in two small ways (the intended laundry document now
+appears for the washers question, and the ENGL 205 chunk keeps its title) but did
+not change an outcome, because the model still refuses the washers question: no
+chunk connects "transfer-friendly" to Innisfree. It also made things slightly
+worse in a way that matters: repeating titles pulled the "deadlines" distance to
+0.597, just under the 0.6 cutoff, so a small rephrasing would now be refused.
 
 ## What's Still Broken
 
-<!-- For each criterion still missed after your fix: what you'd do about it,
-     and why you stopped where you did.
-
-     "I ran out of time" is fine if it's true. Pretending nothing is left is
-     not.
-
-     Milestone 5. -->
+- **Criterion 3:** the gate still lets through three uncovered campus questions.
+  Next step would be a gate that does not rely on one distance, for example
+  requiring the top two chunks to be close, or a lower cutoff tuned on both
+  groups. I stopped because a lower cutoff (about 0.40) would also refuse valid
+  paraphrases at 0.43-0.48, and I did not have time to measure that trade-off.
+- **Criterion 5:** vague questions still rank an unrelated document first.
+  Hybrid search (BM25 plus embeddings) is the next thing I would try.
+- **Criterion 2:** unresolved wording problem about refusals (see Verdicts).
+- **Washers question:** still refused. Out of scope for a one-change unit.
 
 ## What I'd Do Differently
 
-<!-- Knowing what you know now — which of your five criteria would you write
-     differently, and why?
-
-     Milestone 5. -->
-
-
----
-
-# Unit 2
-
-## Run Log — Before
-
-Produced by `run_eval.py::main` (file: `results/run_2026-11-10_1918_before.md`), top-k 5, cutoff 0.6, caching off.
-No `scorer.py` exists yet, so criteria 1, 2 and 5 were counted by script from the retrieved chunks and the answer text. Criterion 4's "complete thought" half needs a human read and is left blank.
-
-| Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
-|---|---|---|---|---|---|
-| 1. Retrieved chunks contain the answer | 4 of 5 | 5/5 | 5/5 | 5/5 | MET (retrieval is deterministic) |
-| 2. Every answer names a source | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
-| 3. Gate stops out-of-corpus questions | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
-| 4. Chunks: 4 of 5 complete, none under 100 chars | see target | shortest 111 chars (floor met); completeness TODO | same | same | TODO (needs your read) |
-| 5. Best source contains the expected phrase | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
-
-**Verdicts, Diagnoses, The Improvement, What's Still Broken, What I'd Do Differently:** TODO — yours to write.
-Every criterion cleared on the first try, so the honest question is whether the targets were set too low (see the note that came with this).
+- Criterion 3: test with campus-flavoured uncovered questions from the start;
+  the far-away set could not fail.
+- Criteria 1 and 5: score by source document, not by phrase, because phrases like
+  "$1.75" appear in several documents.
+- Criterion 2: say explicitly whether a refusal counts as an answer.
+- Write the `expects` phrase after checking what the question actually asks.

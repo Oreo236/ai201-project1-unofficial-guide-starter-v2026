@@ -137,7 +137,13 @@ def split_documents(documents: list[Document]) -> list[Chunk]:
         if current:
             pieces.append("\n\n".join(current))
 
+        # Unit 2 improvement: a chunk after the first loses its document's
+        # heading, so carry the title (first line) into every later chunk.
+        title = doc.text.strip().split("\n", 1)[0].strip()
+
         for index, piece in enumerate(pieces):
+            if index > 0 and title and title not in piece:
+                piece = f"{title}\n\n{piece}"
             chunks.append(
                 Chunk(
                     text=piece,
