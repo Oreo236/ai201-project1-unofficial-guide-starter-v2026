@@ -132,3 +132,58 @@ campus-life document.
      The whole reason the originals stay visible is so someone can see what you
      said before you knew the answer.
      ───────────────────────────────────────────────────────────────────────── -->
+
+
+---
+
+# Capstone criteria
+
+Written before any capstone results exist. Shape A (deploy and instrument),
+Path B (local with logs). The unit 1 and unit 2 criteria above are unchanged.
+
+## 1. Every request leaves a log record
+
+100% of 20 requests produce a log entry.
+
+**Why this target:**
+Logging is a core part of my extension. The existing 14/14 baseline suggests
+this is achievable, but I can expand testing to errors.
+
+---
+
+## 2. Every record has the required fields
+
+At least 19 of 20 records contain all five required fields.
+
+**Why this target:**
+This tests the usefulness of my logs, not just whether they exist.
+
+---
+
+## 3. Request latency
+
+At least 8 of 10 warm requests finish within 8 seconds.
+
+**Why this target:**
+My measured average is 4.68 seconds, but the maximum was 9.68 seconds. This
+target is achievable without being guaranteed.
+
+---
+
+## 4. Reproducible startup
+
+A fresh checkout can be started using `RUNNING.md` without undocumented steps.
+
+**Why this target:**
+This tests whether someone else can actually use my system.
+
+---
+
+## 5. External model failures
+
+At least 4 of 5 simulated rate-limit or model-unavailable failures return a
+readable error without exposing internal details.
+
+**Why this target:**
+This tests what happens when an external dependency fails, which is a
+realistic weakness in an API-based system.
