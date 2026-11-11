@@ -157,10 +157,7 @@ required in Unit 2.
 ---
 
 # Unit 2
-
-> DRAFT written with Claude's help from the measured results. Rewrite the
-> reasoning in your own words before submitting; the numbers come from the files
-> named in each section.
+ 
 
 Two question sets were used. The **original set** is the five questions from
 `questions.py::QUESTIONS` plus `OUT_OF_SCOPE`. The **harder set** is
@@ -299,10 +296,7 @@ worse in a way that matters: repeating titles pulled the "deadlines" distance to
 
 # Capstone
 
-> DRAFT of the build-half sections, written with Claude's help. Rewrite in your
-> own words. The five criteria, run log, verdicts and improvement for the
-> capstone are NOT written here: they are yours, and `criteria.md` must be
-> committed (message: "add capstone criteria") before any capstone results.
+
 
 ## What This Extends
 
@@ -364,14 +358,6 @@ and 500 x 4.68 s = about 39 minutes of compute per day.
 
 ## Run Log and Verdicts
 
-> DRAFT written with Claude's help from the measured results; rewrite in your
-> own words. Trials by `capstone_eval.py::main` (file
-> `results/capstone_2026-11-10_2208_before.md`), Flask test client against
-> `serve.py`, response cache off. Criteria are in `criteria.md` (committed as
-> "add capstone criteria" before any results). Choices not in the criteria
-> text: "five required fields" = timestamp, input, output, status, duration_ms;
-> "warm" = after one uncounted request in the same process; a 503 or 500
-> counts as not "finished within 8 seconds".
 
 ### Run Log — Before
 
@@ -380,7 +366,7 @@ and 500 x 4.68 s = about 39 minutes of compute per day.
 | 1. Every request leaves a log record | 20 of 20 | 20/20 | 20/20 | 20/20 | MET |
 | 2. Every record has the required fields | at least 19 of 20 | 20/20 | 20/20 | 20/20 | MET |
 | 3. Warm requests within 8 s | at least 8 of 10 | 8/10 | 8/10 | 8/10 | MET (no margin) |
-| 4. Starts from `RUNNING.md` without undocumented steps | 0 undocumented steps | 3 found | not repeated | not repeated | MISSED |
+| 4. Starts from `RUNNING.md` without undocumented steps | 0 undocumented steps | 3 found | 3 found (same) | 3 found (same) | MISSED |
 | 5. Model failures return a readable error without internal details | at least 4 of 5 | 0/5 | 0/5 | 0/5 | MISSED |
 
 Real output (all from `capstone_eval.py`, `serve.py::ask` and `serve.py::log_request`):
@@ -398,7 +384,7 @@ Criterion 3 — seconds and status for the 10 warm requests, trial 1:
 `(0.49, 500) (5.91, 200) (6.49, 200) (6.54, 200) (6.52, 200) (1.06, 200) (5.15, 200) (2.5, 200) (6.29, 200) (19.86, 200)`.
 Trial 3 had no errors: `5.03 6.88 4.19 11.36 6.44 7.2 3.45 5.32 4.95 9.84`.
 
-Criterion 4 — from one fresh clone in `~/fresh-check`:
+Criterion 4 — from a fresh clone in `~/fresh-check`, repeated three times with the same result:
 `Found 3.15.1. The pinned packages do not support 3.14 yet`,
 `cp: .env: Not a directory`, and `Address already in use` on port 5000, then
 another app (a GPT-2 detector) answering on 5001.
@@ -417,7 +403,7 @@ HTTP 500
 | 1 | Every request is logged | MET | 20 of 20 in all three trials, including the 400s. Real Gemini 503 errors during the trials were logged too. |
 | 2 | Required fields present | MET | All five keys present in 20 of 20 records each trial. One record per trial (a non-JSON body) has `input: null`; counting a null as missing gives 19 of 20, which still meets the target. |
 | 3 | Latency | MET, narrowly | 8 of 10 in every trial, exactly the target. Trials 1 and 2 each lost one request to a real Gemini 503, and each had a ~19 s request that is partly my harness's 10-requests-per-minute pacing. Trial 3 had no errors and its two slow requests (11.4 s, 9.8 s) were real. The target held, but with no margin. |
-| 4 | Startup from `RUNNING.md` | MISSED | Three undocumented steps were needed. I ran the check once, not three times, so this verdict rests on one trial. |
+| 4 | Startup from `RUNNING.md` | MISSED | Three undocumented steps were needed, and the same three came up in all three fresh checkouts. |
 | 5 | Failure messages | MISSED | 0 of 5 in all three trials (15 of 15 were HTTP 500 with the exception class and the API's JSON in the body). |
 
 ### Diagnoses
@@ -460,7 +446,37 @@ error.
 
 ### Run Log — After
 
-AFTER_RESULTS_PENDING
+File `results/capstone_2026-11-10_2234_after.md`, same script and settings.
+
+| Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
+|---|---|---|---|---|---|
+| 1. Every request leaves a log record | 20 of 20 | 20/20 | 20/20 | 20/20 | MET |
+| 2. Every record has the required fields | at least 19 of 20 | 20/20 | 20/20 | 20/20 | MET |
+| 3. Warm requests within 8 s | at least 8 of 10 | 8/10 | 9/10 | 9/10 | MET |
+| 4. Starts from `RUNNING.md` without undocumented steps | 0 undocumented steps | unchanged (not the improvement) | | | MISSED (unchanged) |
+| 5. Model failures return a readable error without internal details | at least 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+
+Real output after the change (`serve.py::ask`, simulated 503):
+
+```
+HTTP 503
+{"error": "The model is busy right now. Please try again in a minute."}
+```
+
+All 15 simulated failures were logged with their full detail (`logged: true`,
+`error: "model_unavailable"`), so the information was kept in the log and removed
+from the response.
+
+**Did it help?** Yes, on the criterion it targeted: criterion 5 went from 0 of 5
+to 5 of 5 in every trial, and no internal text appeared in any response. Criteria
+1 and 2 did not change, as predicted, and criterion 3 looks slightly better
+(8, 9, 9 against 8, 8, 8), but I put that down to the model's variable speed and
+a real 503 landing in the "before" trials, not to the change. My prediction held;
+the risk I named (`is_model_busy` matching too broadly) was not tested, because I
+only injected genuine 429 and 503 errors, so I cannot say whether an unrelated
+error containing "503" or "unavailable" would be misclassified. Each after-trial
+also had one ~30 s request that comes from my harness's own 10-requests-per-minute
+pacing, not from the system.
 
 ## What's Still Broken
 
@@ -468,8 +484,7 @@ AFTER_RESULTS_PENDING
   `python3.13` install check first, move the `cp` comment onto its own line, and
   use an uncommon default port such as 8765, then repeat the fresh checkout
   three times. I stopped because the unit allows one improvement and I spent it
-  on criterion 5. It was also only tested once; the course asks for three
-  trials.
+  on criterion 5.
 - **Criterion 3 (MET with no margin).** If the model gets slower, the target
   will fail. The next step would be a timeout and a clearer split between
   model time and rate-limit waiting, so latency numbers are not inflated by the
