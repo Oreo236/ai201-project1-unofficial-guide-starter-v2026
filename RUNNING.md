@@ -226,19 +226,29 @@ on the first index).
 
 **Start it, from a fresh checkout:**
 
+Python 3.13 is required. Check with `python3.13 --version`. If it is missing,
+install it first (macOS: `brew install python@3.13`).
+
 ```bash
 python3.13 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env            # then paste your key in
+cp .env.example .env
+# open .env and paste your GEMINI_API_KEY (no comments on the cp line above;
+# interactive zsh passes a trailing # comment to cp as extra arguments)
 python app.py index             # builds the vector store (chroma_db/ is not committed)
-python serve.py                 # http://localhost:5000
+PORT=5050 python serve.py       # http://localhost:5050
 ```
+
+**Port note:** the default port 5000 is taken by AirPlay Receiver on macOS, and
+another local app may already hold 5001. Use `PORT=5050` (or any free port) as
+above, and use the same port in the `curl` commands below. If `localhost:<port>`
+answers with a different program, pick another port.
 
 **Check it:**
 
 ```bash
-curl http://localhost:5000/health
-curl -X POST http://localhost:5000/ask -H 'Content-Type: application/json' \
+curl http://localhost:5050/health
+curl -X POST http://localhost:5050/ask -H 'Content-Type: application/json' \
      -d '{"question": "is the housing lottery random?"}'
 ```
 

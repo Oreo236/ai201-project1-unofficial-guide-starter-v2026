@@ -298,27 +298,27 @@ worse in a way that matters: repeating titles pulled the "deadlines" distance to
 
 
 
-## What This Extends
+**What This Extends**
 
 The Unofficial Guide (this repository, the `campus_life` corpus): the retrieval
 pipeline, relevance gate and grounded answers from units 1 and 2. New: an HTTP
 service with structured request logging and a measured cost per run.
 
-## The Shape
+**The Shape**
 
 **A: Deploy and instrument.** I am adding the operational layer only: `serve.py`
 as the run path, a structured log of every request (including failures and bad
 input), and a measured cost. **Out of scope:** no hosting (Path B instead), no
 change to chunking, retrieval or the gate, no new features or interface.
 
-## Running It
+**Running It**
 
 **Path B: local with logs.** One command (`python serve.py`) after the setup in
 `RUNNING.md` ("Capstone run path"). TODO (yours): say whether you tried hosting.
 Path B is chosen because the embedding model runs locally (about 80 MB of model
 files, and the free host tier has 512 MB of memory).
 
-## Instrumentation
+**Instrumentation**
 
 `serve.py::log_request` appends one JSON line per `/ask` request to
 `logs/requests.jsonl`. Fields: `timestamp`, `input`, `output`, `status`,
@@ -344,7 +344,7 @@ and 1 forced error, all unedited):
 {"timestamp": "2026-11-11T02:45:51.018+00:00", "input": "is the housing lottery random?", "output": "RuntimeError: No index called 'does_not_exist__default'. Run `python app.py index` first.", "status": 500, "duration_ms": 446, "error": "RuntimeError"}
 ```
 
-## What It Costs
+**What It Costs**
 
 Measured with `measure_cost.py` (10 questions through `/ask`, response cache
 off, free-tier Gemini model `gemini-3.5-flash-lite`): mean **4.68 seconds**
@@ -356,10 +356,10 @@ For 100 people a day, assuming 5 questions each (my assumption, not measured):
 and 500 x 4.68 s = about 39 minutes of compute per day.
 
 
-## Run Log and Verdicts
+**Run Log and Verdicts**
 
 
-### Run Log — Before
+**Run Log — Before**
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
@@ -396,7 +396,7 @@ HTTP 500
 {"error": "RuntimeError: Still rate limited after 4 attempts. Wait a minute and try again - your key is fine.\nLast error: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota', 'status': 'RESOURCE_EXHAUSTED'}}"}
 ```
 
-### Verdicts
+**Verdicts**
 
 | # | Criterion | Verdict | How I decided |
 |---|---|---|---|
@@ -406,7 +406,7 @@ HTTP 500
 | 4 | Startup from `RUNNING.md` | MISSED | Three undocumented steps were needed, and the same three came up in all three fresh checkouts. |
 | 5 | Failure messages | MISSED | 0 of 5 in all three trials (15 of 15 were HTTP 500 with the exception class and the API's JSON in the body). |
 
-### Diagnoses
+**Diagnoses**
 
 - **Criterion 5 — generation stage, surfaced by `serve.py`.** `generate.py::generate`
   retries a 429 four times and then raises `RuntimeError`, and re-raises a 503
@@ -426,7 +426,7 @@ HTTP 500
   were errors or cache-free refusals. The target was met only because most
   requests landed between 4 and 7 seconds.
 
-## The Improvement
+**The Improvement**
 
 **What I changed:** In `serve.py::ask`, rate-limit and model-unavailable errors
 (429 and 503) now return HTTP 503 with the message "The model is busy right now.
@@ -444,7 +444,7 @@ measure before and after.
 substrings such as "503" and "unavailable", so it could also catch an unrelated
 error.
 
-### Run Log — After
+**Run Log — After**
 
 File `results/capstone_2026-11-10_2234_after.md`, same script and settings.
 
@@ -478,7 +478,7 @@ error containing "503" or "unavailable" would be misclassified. Each after-trial
 also had one ~30 s request that comes from my harness's own 10-requests-per-minute
 pacing, not from the system.
 
-## What's Still Broken
+**What's Still Broken**
 
 - **Criterion 4 (MISSED).** The three problems are not fixed. I would put the
   `python3.13` install check first, move the `cp` comment onto its own line, and
@@ -502,7 +502,7 @@ pacing, not from the system.
 clean-checkout test three times, because a system nobody else can start is the
 most limiting problem.
 
-## What I'd Do Differently
+**What I'd Do Differently**
 
 - Criterion 4 needs a number. "No undocumented steps" cannot be scored the same
   way by two people; "start with at most N commands and 0 edits beyond the doc"
