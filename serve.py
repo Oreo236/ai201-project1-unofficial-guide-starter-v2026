@@ -20,20 +20,36 @@ Why this exists: `app.py` runs once and exits, which is fine on your laptop
 and impossible to deploy. A hosted service has to stay up and wait for
 requests. This is the smallest thing that does that.
 
-⚠️ There is deliberately no logging, no timing and no metrics in this file.
-Unit 9 has you build the structured log yourself — the request line, the
-timing field everyone skips, the whole instrument-before-you-deploy exercise.
-Shipping a logger here would hand you the answer to that. Add yours in unit 9;
-this file stays the bare shell until then.
+Capstone: every request to /ask now writes one JSON line to logs/requests.jsonl
+(timestamp, input, output, duration, status, plus gate and token fields).
+Failures and bad input are logged too.
 """
 
+import json
 import os
+import threading
+import time
+from datetime import datetime, timezone
 
 from flask import Flask, jsonify, request
 
 import config
 
 app = Flask(__name__)
+
+LOG_PATH = config.ROOT / "logs" / "requests.jsonl"
+_log_lock = threading.Lock()
+
+
+def log_request(record: dict) -> None:
+    """Append one structured record. Never lets a logging problem break a request."""
+    try:
+        LOG_PATH.parent.mkdir(exist_ok=True)
+        record = {"timestamp": datetime.now(timezone.utc).isoformat(timespec="milliseconds"), **record}
+        with _log_lock, LOG_PATH.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(record, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
 
 
 @app.get("/health")
@@ -72,25 +88,47 @@ def ask():
     `"refused": true` so whatever calls this can tell the two apart.
     """
     from app import ask_pipeline
+    from generate import token_counts
 
+    started = time.perf_counter()
     payload = request.get_json(silent=True) or {}
-    question = (payload.get("question") or "").strip()
+    raw = payload.get("question")
+    question = (raw if isinstance(raw, str) else "").strip()
+
+    def ms() -> int:
+        return round((time.perf_counter() - started) * 1000)
 
     if not question:
-        return (
-            jsonify(
-                {
-                    "error": "Send JSON with a question in it, like "
-                    '{"question": "is the housing lottery random?"}'
-                }
-            ),
-            400,
+        message = (
+            "Send JSON with a question in it, like "
+            '{"question": "is the housing lottery random?"}'
         )
+        log_request({"input": raw, "output": message, "status": 400,
+                     "duration_ms": ms(), "error": "bad_input"})
+        return jsonify({"error": message}), 400
 
+    before = token_counts()
     try:
         outcome = ask_pipeline(question, corpus=config.CORPUS)
     except Exception as exc:  # noqa: BLE001 — a reader gets this, not a traceback
-        return jsonify({"error": f"{type(exc).__name__}: {exc}"}), 500
+        message = f"{type(exc).__name__}: {exc}"
+        log_request({"input": question, "output": message, "status": 500,
+                     "duration_ms": ms(), "error": type(exc).__name__})
+        return jsonify({"error": message}), 500
+
+    after = token_counts()
+    log_request({
+        "input": question,
+        "output": outcome["answer"],
+        "status": 200,
+        "duration_ms": ms(),
+        "refused": outcome["refused"],
+        "best_distance": round(outcome["best_distance"], 4),
+        "sources": outcome["sources"],
+        "tokens_in": after["prompt"] - before["prompt"],
+        "tokens_out": after["output"] - before["output"],
+        "error": None,
+    })
 
     return jsonify(
         {
