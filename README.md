@@ -314,9 +314,13 @@ change to chunking, retrieval or the gate, no new features or interface.
 **Running It**
 
 **Path B: local with logs.** One command (`python serve.py`) after the setup in
-`RUNNING.md` ("Capstone run path"). TODO (yours): say whether you tried hosting.
-Path B is chosen because the embedding model runs locally (about 80 MB of model
-files, and the free host tier has 512 MB of memory).
+`RUNNING.md` ("Capstone run path"). I did not try hosting it. Path B is chosen
+because this is the heaviest of my projects: the embedding model runs locally
+(about 80 MB downloaded, 168 MB in the Chroma cache on my machine), the
+installed packages take about 427 MB, and the free host tier has only 512 MB of
+memory. The index (`chroma_db/`, 5.3 MB) is also not committed, so a host would
+have to rebuild it, and a free instance wipes its disk when it sleeps, which
+would delete `logs/requests.jsonl`.
 
 **Instrumentation**
 
