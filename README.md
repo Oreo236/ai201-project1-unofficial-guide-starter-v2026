@@ -360,3 +360,142 @@ per run (range 0.87-9.68 s) and **634 tokens** per run (576 in,
 For 100 people a day, assuming 5 questions each (my assumption, not measured):
 100 x 5 = 500 runs x 634 tokens = about 317k tokens
 and 500 x 4.68 s = about 39 minutes of compute per day.
+
+
+## Run Log and Verdicts
+
+> DRAFT written with Claude's help from the measured results; rewrite in your
+> own words. Trials by `capstone_eval.py::main` (file
+> `results/capstone_2026-11-10_2208_before.md`), Flask test client against
+> `serve.py`, response cache off. Criteria are in `criteria.md` (committed as
+> "add capstone criteria" before any results). Choices not in the criteria
+> text: "five required fields" = timestamp, input, output, status, duration_ms;
+> "warm" = after one uncounted request in the same process; a 503 or 500
+> counts as not "finished within 8 seconds".
+
+### Run Log — Before
+
+| Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
+|---|---|---|---|---|---|
+| 1. Every request leaves a log record | 20 of 20 | 20/20 | 20/20 | 20/20 | MET |
+| 2. Every record has the required fields | at least 19 of 20 | 20/20 | 20/20 | 20/20 | MET |
+| 3. Warm requests within 8 s | at least 8 of 10 | 8/10 | 8/10 | 8/10 | MET (no margin) |
+| 4. Starts from `RUNNING.md` without undocumented steps | 0 undocumented steps | 3 found | not repeated | not repeated | MISSED |
+| 5. Model failures return a readable error without internal details | at least 4 of 5 | 0/5 | 0/5 | 0/5 | MISSED |
+
+Real output (all from `capstone_eval.py`, `serve.py::ask` and `serve.py::log_request`):
+
+Criterion 1 and 2 — the 20 requests were 10 valid questions, 5 out-of-scope
+questions refused by the gate, and 5 bad inputs (empty, whitespace, non-JSON,
+a number, a list). Status codes in trial 1: fifteen 200s and five 400s; 20
+new lines in `logs/requests.jsonl`. One log line from the clean-checkout test:
+
+```
+{"timestamp": "2026-11-11T03:22:10.963+00:00", "input": "", "output": "Send JSON with a question in it, like {\"question\": \"is the housing lottery random?\"}", "status": 400, "duration_ms": 0, "error": "bad_input"}
+```
+
+Criterion 3 — seconds and status for the 10 warm requests, trial 1:
+`(0.49, 500) (5.91, 200) (6.49, 200) (6.54, 200) (6.52, 200) (1.06, 200) (5.15, 200) (2.5, 200) (6.29, 200) (19.86, 200)`.
+Trial 3 had no errors: `5.03 6.88 4.19 11.36 6.44 7.2 3.45 5.32 4.95 9.84`.
+
+Criterion 4 — from one fresh clone in `~/fresh-check`:
+`Found 3.15.1. The pinned packages do not support 3.14 yet`,
+`cp: .env: Not a directory`, and `Address already in use` on port 5000, then
+another app (a GPT-2 detector) answering on 5001.
+
+Criterion 5 — simulated 429 and 503 failures (`capstone_eval.py::trial_failures`):
+
+```
+HTTP 500
+{"error": "RuntimeError: Still rate limited after 4 attempts. Wait a minute and try again - your key is fine.\nLast error: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota', 'status': 'RESOURCE_EXHAUSTED'}}"}
+```
+
+### Verdicts
+
+| # | Criterion | Verdict | How I decided |
+|---|---|---|---|
+| 1 | Every request is logged | MET | 20 of 20 in all three trials, including the 400s. Real Gemini 503 errors during the trials were logged too. |
+| 2 | Required fields present | MET | All five keys present in 20 of 20 records each trial. One record per trial (a non-JSON body) has `input: null`; counting a null as missing gives 19 of 20, which still meets the target. |
+| 3 | Latency | MET, narrowly | 8 of 10 in every trial, exactly the target. Trials 1 and 2 each lost one request to a real Gemini 503, and each had a ~19 s request that is partly my harness's 10-requests-per-minute pacing. Trial 3 had no errors and its two slow requests (11.4 s, 9.8 s) were real. The target held, but with no margin. |
+| 4 | Startup from `RUNNING.md` | MISSED | Three undocumented steps were needed. I ran the check once, not three times, so this verdict rests on one trial. |
+| 5 | Failure messages | MISSED | 0 of 5 in all three trials (15 of 15 were HTTP 500 with the exception class and the API's JSON in the body). |
+
+### Diagnoses
+
+- **Criterion 5 — generation stage, surfaced by `serve.py`.** `generate.py::generate`
+  retries a 429 four times and then raises `RuntimeError`, and re-raises a 503
+  immediately. `serve.py::ask` catches every exception and returns
+  `f"{type(exc).__name__}: {exc}"` with status 500, so the class name, the quota
+  text and the API's JSON reach the caller. The log recorded all 15 failures
+  correctly, so the instrumentation worked and only the response was wrong.
+- **Criterion 4 — the run path, not the code.** One root cause: `RUNNING.md`
+  assumed this machine's defaults. (1) `python3` is 3.15 here and the pinned
+  packages need 3.13, with no instruction on how to get it; (2) an inline `#`
+  comment after `cp .env.example .env` is passed to `cp` as arguments by
+  interactive zsh; (3) port 5000 is held by macOS AirPlay Receiver and port 5001
+  was also shared with another local app, so `localhost:5001` answered with the
+  wrong program.
+- **Criterion 3 — near miss.** Latency comes from the model call (about 3-8 s on
+  the free tier) plus the starter's rate-limit waits; the fast 0.5-1 s requests
+  were errors or cache-free refusals. The target was met only because most
+  requests landed between 4 and 7 seconds.
+
+## The Improvement
+
+**What I changed:** In `serve.py::ask`, rate-limit and model-unavailable errors
+(429 and 503) now return HTTP 503 with the message "The model is busy right now.
+Please try again in a minute." The full error stays in `logs/requests.jsonl`
+(`error: "model_unavailable"`). Helper: `serve.py::is_model_busy`. Nothing else
+was changed.
+
+**Why I picked it:** It follows directly from the criterion 5 diagnosis: the
+leak happens in the one `except` block in `serve.py::ask`. I chose it over fixing
+`RUNNING.md` (criterion 4) because the failure was a behaviour gap I could
+measure before and after.
+
+**Prediction written before the "after" trials:** criterion 5 goes from 0/5 to
+5/5; criteria 1 to 3 do not change. The risk is that `is_model_busy` matches
+substrings such as "503" and "unavailable", so it could also catch an unrelated
+error.
+
+### Run Log — After
+
+AFTER_RESULTS_PENDING
+
+## What's Still Broken
+
+- **Criterion 4 (MISSED).** The three problems are not fixed. I would put the
+  `python3.13` install check first, move the `cp` comment onto its own line, and
+  use an uncommon default port such as 8765, then repeat the fresh checkout
+  three times. I stopped because the unit allows one improvement and I spent it
+  on criterion 5. It was also only tested once; the course asks for three
+  trials.
+- **Criterion 3 (MET with no margin).** If the model gets slower, the target
+  will fail. The next step would be a timeout and a clearer split between
+  model time and rate-limit waiting, so latency numbers are not inflated by the
+  starter's pacing.
+- **Failure handling beyond 429 and 503.** A missing API key, a very long
+  question, and a failing log write are untested. The log write fails silently
+  by design (`log_request` swallows `OSError`), so a full disk would lose
+  records and criterion 1 would fail without any sign of it.
+- **Token counts in the log** come from process-wide counters, so they are only
+  exact when requests arrive one at a time.
+- **Not hosted.** Path B only; the free tier's 512 MB of memory is too small for
+  the local embedding model.
+
+**What I would do first with another unit:** repair `RUNNING.md` and re-run the
+clean-checkout test three times, because a system nobody else can start is the
+most limiting problem.
+
+## What I'd Do Differently
+
+- Criterion 4 needs a number. "No undocumented steps" cannot be scored the same
+  way by two people; "start with at most N commands and 0 edits beyond the doc"
+  can.
+- Criterion 2 should name the five fields and say whether a null counts as
+  present. I had to decide that after seeing the results.
+- Criterion 3 should say what counts as warm and whether an error counts
+  against the 8-second target, and should be measured without the harness's own
+  rate-limit pacing.
+- Criterion 5 should define "readable" and "internal details", for example no
+  exception class name, no raw API text, an HTTP 503.
