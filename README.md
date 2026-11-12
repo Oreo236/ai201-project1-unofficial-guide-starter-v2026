@@ -457,7 +457,7 @@ File `results/capstone_2026-11-08_2234_after.md`, same script and settings.
 | 1. Every request leaves a log record | 20 of 20 | 20/20 | 20/20 | 20/20 | MET |
 | 2. Every record has the required fields | at least 19 of 20 | 20/20 | 20/20 | 20/20 | MET |
 | 3. Warm requests within 8 s | at least 8 of 10 | 8/10 | 9/10 | 9/10 | MET |
-| 4. Starts from `RUNNING.md` without undocumented steps | 0 undocumented steps | unchanged (not the improvement) | | | MISSED (unchanged) |
+| 4. Starts from `RUNNING.md` without undocumented steps | 0 undocumented steps | 0 found (1 trial) | not run | not run | MET (1 trial) |
 | 5. Model failures return a readable error without internal details | at least 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
 
 Real output after the change (`serve.py::ask`, simulated 503):
@@ -484,11 +484,13 @@ pacing, not from the system.
 
 **What's Still Broken**
 
-- **Criterion 4 (MISSED).** The three problems are not fixed. I would put the
-  `python3.13` install check first, move the `cp` comment onto its own line, and
-  use an uncommon default port such as 8765, then repeat the fresh checkout
-  three times. I stopped because the unit allows one improvement and I spent it
-  on criterion 5.
+- **Criterion 4 (fixed after the main improvement, 1 trial).** After the
+  criterion 5 fix I edited `RUNNING.md` (Python 3.13 check, the `cp` comment on
+  its own line, `PORT=5050`) and re-ran a fresh clone: venv, install, `cp .env`,
+  `python app.py index`, `PORT=5050 python serve.py`, `GET /health` and a bad
+  input all worked with 0 undocumented steps. I ran it once, not three times, and
+  did not send a real `/ask` in that clone, so the result is less certain than
+  the other criteria. This was a second change beyond the one improvement.
 - **Criterion 3 (MET with no margin).** If the model gets slower, the target
   will fail. The next step would be a timeout and a clearer split between
   model time and rate-limit waiting, so latency numbers are not inflated by the
@@ -502,9 +504,11 @@ pacing, not from the system.
 - **Not hosted.** Path B only; the free tier's 512 MB of memory is too small for
   the local embedding model.
 
-**What I would do first with another unit:** repair `RUNNING.md` and re-run the
-clean-checkout test three times, because a system nobody else can start is the
-most limiting problem.
+**What I would do first with another unit:** test the failure paths I have not
+tried (a missing API key, a very long question, a failing log write), because
+`log_request` swallows write errors and a full disk would lose records without
+any sign of it. I would also repeat the clean-checkout test twice more to make
+criterion 4 three trials.
 
 **What I'd Do Differently**
 
