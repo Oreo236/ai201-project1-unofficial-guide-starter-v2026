@@ -138,9 +138,6 @@ campus-life document.
 
 # Capstone criteria
 
-Written before any capstone results exist. Shape A (deploy and instrument),
-Path B (local with logs). The unit 1 and unit 2 criteria above are unchanged.
-
 ## 1. Every request leaves a log record
 
 100% of 20 requests produce a log entry.
